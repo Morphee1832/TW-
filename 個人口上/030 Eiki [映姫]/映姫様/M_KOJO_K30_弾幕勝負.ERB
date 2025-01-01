@@ -1,0 +1,231 @@
+﻿;==================================================
+;弾幕勝負
+;==================================================
+;
+@M_KOJO_MESSAGE_COM_K30_DANMAKU(ARGS, 相手残機)
+#DIM 相手残機
+#DIMS TXT
+;全体の流れ
+;①【戦闘前】→②ダイスロールとプレイヤー選択肢、ハンデをつけた場合は【ハンデ口上】→③対応スキルが発動した場合【スキル口上】→④被弾判定、キャラが被弾したなら【被弾口上】→
+;どちらかの残機が0になっていなければ②に戻る→⑤【戦闘後口上】
+
+;--------------------------------------------------
+;記入チェック（=0, 非表示、1, 表示）
+LOCAL = 1
+;-------------
+IF LOCAL
+SIF FLAG:口上色
+	TRYCALLFORM M_KOJO_COLOR_K{NO:TARGET}
+	;-------------------------------------------------
+	;小分岐
+	;-------------------------------------------------
+	;戦闘前
+	IF K30_CHECK_HEN_T()
+		HANDICAP_FIXED = 2500
+	ELSEIF TCVAR:30:364
+		HANDICAP_FIXED = -99999
+	ENDIF
+	HANDICAP_RAND = 0
+	
+	;ハンデをつけることができ、数値が大きいほどあなたが不利になる　数値が負ならあなたが有利に
+	;キャラの能力に関わらずクッソ強くしたり弱くしたりできる
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 1
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "戦闘前"
+		IF K30_CHECK_HEN_T()
+			PRINTFORML 「……今日の私は思うところが色々とあります」
+			PRINTFORML 「少し本気でお相手いたしましょう」
+			PRINTFORMDW 今の映姫は『ごっこ』で済ませるつもりがなさそうだ…
+		ELSEIF TCVAR:30:364
+			CALL HPH_PRINT, @"「はぅっ…HPHHPH」", "L"
+			CALL HPH_PRINT, @"「空、とぶだけで…せいいっぱい、なのに…HPH」", "L"
+			PRINTFORMDW 今の映姫はクソザコナメクジだ！
+		ELSE
+			SELECTCASE RAND:3
+				CASE 0
+					PRINTFORMW 「貴方の罪の重さ、計るとしましょう」
+				CASE 1
+					PRINTFORMW 「私の教え、きちんと守ってるかしら？」
+				CASE 2
+					PRINTFORMW 「私、弾幕での『対戦』には自信があるのよ」
+			ENDSELECT
+		ENDIF
+		RETURN 0
+	ENDIF
+	;-------------------------------------------------
+	;ハンデ
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 1
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "ハンデ"
+		IF K30_CHECK_HEN_T()
+			PRINTDATADL
+				DATAFORM 映姫は無言のまま集中している…
+				DATAFORM 映姫の背後に渦巻くオーラが見える…
+				DATAFORM 映姫は表情一つ変えず弾幕を展開している…
+			ENDDATA
+		ELSEIF TCVAR:30:364
+			LOCALS = はぅっ/ひいぃんっ/やあぁ/あんっ/あふっ/んんっ/やっHPH　だめぇ
+			TXT '= TEXTR(LOCALS)
+			CALL HPH_PRINT, @"「%TXT%HPHHPH」", "L"
+			PRINTDATADL
+				DATAFORM 映姫は弾幕を展開しようとしたが、出てきたのは気の抜ける嬌声だった…
+				DATAFORM 映姫は腑抜けた声と共に弾幕を放った！\n……%CALLNAME:MASTER%に向かってクナイ弾が１個だけ飛んできた
+				DATAFORM 映姫は声を出すと同時にお尻を押さえ固まってしまった…
+			ENDDATA
+		ENDIF
+		RETURN 0
+	ENDIF
+	;-------------------------------------------------
+	;戦闘中TARGET被弾時口上
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 1
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "被弾" 
+		;別に一律で「やられたー」だけでもいいよ
+		IF TCVAR:30:364
+			LOCALS = やだぁ…/はうぅっ/あひんっ/きゃんっ/あんっ/だめっ…/まって…
+			TXT '= TEXTR(LOCALS)
+			TXT '= \@ !相手残機 ? あぅううHPH　むりですよぉ… # %TXT% \@
+			CALL HPH_PRINT, @"「%TXT%HPHHPH」", "W"
+		ELSE
+			SELECTCASE 相手残機
+				;残り残機3が表示されるのは【洽覧深識】持ちのみ
+				CASE 3
+					PRINTFORML 
+				CASE 2
+					IF K30_CHECK_HEN_T()
+						PRINTFORMW 「…次」
+					ELSE
+						PRINTFORML 「私の教えを守っていればこのくらい当然です」
+						PRINTFORMW 「次はもう少し試しますよ」
+					ENDIF
+					PRINTFORMW 「審判『十王裁判』！」
+				CASE 1
+					IF K30_CHECK_HEN_T()
+						PRINTFORMW 「…これで終わりです」
+					ELSE
+						PRINTFORML 「なかなかやりますね」
+						PRINTFORMW 「さあ、これで白黒はっきりつけましょう」
+					ENDIF
+					PRINTFORMW 「審判『ラストジャッジメント』！！」
+				CASE 0
+					IF K30_CHECK_HEN_T()
+						PRINTFORMW 「…くっ」
+					ELSE
+						PRINTFORMW 「お見事です！」
+					ENDIF
+			ENDSELECT
+		ENDIF
+	ENDIF
+	;-------------------------------------------------
+	;戦闘中
+	;TARGETの【残忍酷薄】発動時
+	;ARGはTARGETの残機
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 0
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "残忍酷薄"
+		
+	ENDIF
+	;-------------------------------------------------
+	;戦闘中
+	;TARGETの【乾坤一擲】発動時
+	;ARGはTARGETの残機
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 1
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "乾坤一擲"
+		IF K30_CHECK_HEN_T()
+			PRINTFORMW 「……全力でいきます」
+		ELSEIF TCVAR:30:364
+			PRINTFORMW 「ここが…勝負、どころ…」
+			CALL HPH_PRINT, @"「あひっHPHHPH」", "L"
+			CALL HPH_PRINT, @"「おなか…力、入らない…HPH」", "W"
+		ELSE
+			PRINTFORMW 「ここが勝負どころですね」
+		ENDIF
+	ENDIF
+	;-------------------------------------------------
+	;戦闘中
+	;TARGETの【怪力乱神】発動時
+	;ARGはTARGETの残機
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 0
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "怪力乱神"
+		
+	ENDIF
+	
+	;-------------------------------------------------
+	;戦闘後
+	;記入チェック（=0, 非表示、1, 表示）
+	LOCAL:1 = 1
+	;-------------------------------------------------
+	IF LOCAL:1 && ARGS == "戦闘後" 
+		PRINTFORML 
+		;残り残機4が表示されうるのは【洽覧深識】持ちのみ
+		;残機が1以上ならあなたの負け、0の場合はあなたの勝利
+		IF 相手残機 && TCVAR:30:364
+			PRINTFORML 「何を、やりたいのかしら…？」
+			CALL HPH_PRINT, @"「はぁ…HPH　疲れました…」", "W"
+		ELSE
+			SELECTCASE 相手残機
+				CASE 4
+					PRINTFORML 
+				CASE 3
+					IF K30_CHECK_HEN_T()
+						PRINTFORML 「…このままでは貴方は地獄行き」
+						PRINTFORMW 「悔い改め、ひたすらに善行を積みなさい」
+					ELSE
+						PRINTFORMW 「何をやってるんです。しっかりしなさい！」
+					ENDIF
+				CASE 2
+					IF K30_CHECK_HEN_T()
+						PRINTFORML 「…このままでは貴方は畜生界行き」
+						PRINTFORMW 「虐げられるのが嫌なら、深く反省して善行を積みあげなさい」
+					ELSE
+						PRINTFORMW 「うーん…まず私の教えをちゃんと聞いていますか？」
+					ENDIF
+				CASE 1
+					IF K30_CHECK_HEN_T()
+						PRINTFORML 「…このままでは貴方は餓鬼道行き」
+						PRINTFORMW 「欲望にまみれた日々の行いを反省して、きちんと善行を積むことです」
+					ELSE
+						PRINTFORMW 「惜しいところですが、日々の積み重ねが足りなかったとも言えます」
+					ENDIF
+				CASE 0
+					;日記フラグ＠映姫様が負けた
+					IF DIARY:30:4 == 0 && !TCVAR:30:364
+						CALL K30_WRITE_DIARY(4)
+						;過去に映姫様が勝利してたら分岐
+						SIF STRCOUNT(CSTR:30:0, "勝利")
+							SETBIT CFLAG:1910, 1
+					ENDIF
+					IF K30_CHECK_HEN_T()
+						PRINTFORMW 「……いちおう合格でしょう」
+					ELSEIF TCVAR:30:364
+						CALL HPH_PRINT, @"「はぁ…HPH　はぁ…HPH　はぁ…HPH」", "L"
+						PRINTFORML 「確かに、貴方の…勝利、ですけど…」
+						PRINTFORMW 「こんなの、何の身にも…ならないのでは…？」
+					ELSE
+						PRINTFORML 「よくやりました。でもここで終わりではありませんよ」
+						PRINTFORMW 「善行も修練も積み重ねてこそです。これからも精進を続けてください」
+					ENDIF
+			ENDSELECT
+		ENDIF
+		;日記フラグ＠あなたが負けた
+		IF 相手残機 > 0
+			CALLF FIRSTTIME("勝利")
+			IF DIARY:30:3 == 0 && !CFLAG:30:弾幕勝負勝利
+				CALL K30_WRITE_DIARY(3)
+				SIF 相手残機 == 1
+					SETBIT CFLAG:1910, 0
+			ENDIF
+		ENDIF
+	ENDIF
+RESETCOLOR
+ENDIF
+RETURN 1
+
